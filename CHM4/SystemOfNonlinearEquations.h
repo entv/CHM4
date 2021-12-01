@@ -36,6 +36,42 @@ public:
 	Vector ComputeInPoint(Vector point) override;
 };
 
+class IntersectionOfCirclesWithLine : public VectorOfFunctions
+{
+private:
+	int size = 3;
+
+public:
+	Vector ComputeInPoint(Vector point) override;
+};
+
+class IntersectingLines : public VectorOfFunctions
+{
+private:
+	int size = 3;
+
+public:
+	Vector ComputeInPoint(Vector point) override;
+};
+
+class IntersectingLines_WithWeight : public VectorOfFunctions
+{
+private:
+	int size = 3;
+
+public:
+	Vector ComputeInPoint(Vector point) override;
+};
+
+class IntersectingLineWithSineWave : public VectorOfFunctions
+{
+private:
+	int size = 2;
+
+public:
+	Vector ComputeInPoint(Vector point) override;
+};
+
 struct SystemParameters
 {
 	int n;
@@ -53,7 +89,13 @@ struct SystemParameters
 class Squaring
 {
 public:
-	virtual void LeadToSquare(Matrix& matrix, Vector& vector);
+	virtual void LeadToSquare(Matrix& matrix, Vector& vector) = 0;
+};
+
+class Symmetrization : public Squaring
+{
+public:
+	void LeadToSquare(Matrix& matrix, Vector& vector) override;
 };
 
 class ExcludingRows : public Squaring
@@ -86,9 +128,11 @@ public:
 	SystemOfNonlinearEquations(struct SystemParameters parameters, Squaring* squaring);
 	Vector Solve();
 	Grid SearchProcess();
+	
 
 private:
-	Matrix FormJacobiMatrix(Vector Fk);
+	Matrix FormJacobiMatrix(Vector xk);
+	Matrix AnaliticalJacobiMatrix(Vector xk);
 	Vector ComputeDirectionByGauss(Matrix matrix, Vector vector);
 	Vector ComputeXk(Vector xk, Vector dx);
 };

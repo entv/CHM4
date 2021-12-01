@@ -26,19 +26,72 @@ Vector DisjointCircles::ComputeInPoint(Vector point)
 
 Vector IntersectingCirclesAtPoint::ComputeInPoint(Vector point)
 {
-	return Vector(2);
+	Vector value(size);
+
+	value(0) = pow(point(0) + 2, 2) + pow(point(1) - 2, 2) - 4;
+	value(1) = pow(point(0) - 2, 2) + pow(point(1) - 2, 2) - 4;
+
+	return value;
 }
 
 Vector IntersectingCircles::ComputeInPoint(Vector point)
 {
-	return Vector(2);
+	Vector value(size);
+
+	value(0) = pow(point(0) + 1, 2) + pow(point(1) - 2, 2) - 4;
+	value(1) = pow(point(0) - 1, 2) + pow(point(1) - 2, 2) - 4;
+
+	return value;
 }
 
-void Squaring::LeadToSquare(Matrix& matrix, Vector& vector)
+Vector IntersectionOfCirclesWithLine::ComputeInPoint(Vector point)
+{
+	Vector value(size);
+
+	value(0) = pow(point(0) + 2, 2) + pow(point(1) - 2, 2) - 4;
+	value(1) = pow(point(0) - 2, 2) + pow(point(1) - 2, 2) - 4;
+	value(2) = point(0) + point(1) - 2;
+
+	return value;
+}
+
+Vector IntersectingLines::ComputeInPoint(Vector point)
+{
+	Vector value(size);
+
+	value(0) = point(0);
+	value(1) = point(1);
+	value(2) = point(0) + point(1) - 4;
+
+	return value;
+}
+
+Vector IntersectingLines_WithWeight::ComputeInPoint(Vector point)
+{
+	Vector value(size);
+
+	value(0) = point(0);
+	value(1) = 300 * (point(1));
+	value(2) = (point(0) + point(1) - 4);
+
+	return value;
+}
+
+Vector IntersectingLineWithSineWave::ComputeInPoint(Vector point)
+{
+	Vector value(size);
+
+	value(0) = sin(point(0)) - point(1);
+	value(1) = point(0) - point(1) + 1;
+
+	return value;
+}
+
+void Symmetrization::LeadToSquare(Matrix& matrix, Vector& vector)
 {
 	Matrix temp = matrix.Transpose();
 	matrix = temp * matrix;
-	vector = (-1.0 * temp) * vector;
+	vector = temp * vector;
 }
 
 void ExcludingRows::LeadToSquare(Matrix& matrix, Vector& vector)
@@ -106,10 +159,10 @@ void Convolution::LeadToSquare(Matrix& matrix, Vector& vector)
 		}
 	}
 
-	vector(n - 1) = sum;
+	vector(m - 1) = sum;
 	for (int i = 0; i < n; i++)
 	{
-		matrix(n - 1, i) = rowsSum(i);
+		matrix(m - 1, i) = 2 * rowsSum(i);
 	}
 }
 
@@ -127,14 +180,16 @@ SystemOfNonlinearEquations::SystemOfNonlinearEquations(struct SystemParameters p
 	this->squaring = squaring;
 }
 
-Matrix SystemOfNonlinearEquations::FormJacobiMatrix(Vector x)
+Matrix SystemOfNonlinearEquations::FormJacobiMatrix(Vector xk)
 {
 	Matrix Jacobi(m, n);
+	Vector Fp = F->ComputeInPoint(xk);
+
 	real h = 1e-10;
 
-	Vector temp = x;
+	Vector temp = xk;
 
-	Vector Fp = F->ComputeInPoint(x);
+	
 
 	for (int i = 0; i < m; i++)
 	{
@@ -149,7 +204,7 @@ Matrix SystemOfNonlinearEquations::FormJacobiMatrix(Vector x)
 			}
 
 			Jacobi(i, j) = Fp_h(i) / h;
-			temp(j) = x(j);
+			temp(j) = xk(j);
 		}
 	}
 
@@ -223,10 +278,6 @@ Vector SystemOfNonlinearEquations::ComputeXk(Vector xk, Vector dx)
 
 	for (int v = 0; v < maxiterBeta && beta > epsBeta; v++)
 	{
-		//for (int i = 0; i < n; i++)
-		//{
-			//xk1(i) = xk(i) + beta * dx(i);
-		//}
 		xk1 = xk + beta * dx;
 
 		real FkNorm = F->ComputeInPoint(xk1).EuqlideanNorm();
@@ -237,6 +288,8 @@ Vector SystemOfNonlinearEquations::ComputeXk(Vector xk, Vector dx)
 
 		beta /= 2;
 	}
+
+	cout << "beta: " << beta << endl;
 
 	return xk1;
 }
@@ -258,31 +311,7 @@ Vector SystemOfNonlinearEquations::Solve()
 		}
 
 		Vector dx = ComputeDirectionByGauss(Jacobi, Fk);
-		/*
-			real beta = 1.0;
-			FNorm = FkNorm;
-			for (int v = 0; v < maxiterBeta && beta > epsBeta; v++)
-			{
-				for (int i = 0; i < n; i++)
-				{
-					xk1(i) = xk(i) + beta * dx(i);
-				}
-				xk1 = xk + beta * dx;
 
-				FkNorm = F->ComputeInPoint(xk1).EuqlideanNorm();
-				if (FkNorm < FNorm)
-				{
-					break;
-				}
-
-				beta /= 2;
-			}
-
-			for (int i = 0; i < n; i++)
-			{
-				xk(i) = xk1(i);
-			}
-		*/
 		xk = ComputeXk(xk, dx);
 
 		discrepancy = F->ComputeInPoint(xk).EuqlideanNorm() / F0Norm;
@@ -313,6 +342,75 @@ Grid SystemOfNonlinearEquations::SearchProcess()
 
 		discrepancy = F->ComputeInPoint(xk).EuqlideanNorm() / F0Norm;
 
+		cout << "discrepancy: " << discrepancy << endl;
+
 		co_yield xk;
 	}
 }
+
+Matrix SystemOfNonlinearEquations::AnaliticalJacobiMatrix(Vector xk)
+{
+	Matrix Jacobi(m, n);
+
+	Jacobi(0, 0) = cos(xk(0));
+	Jacobi(0, 1) = -1;
+	Jacobi(1, 0) = 1;
+	Jacobi(1, 1) = -1;
+
+	return Jacobi;
+}
+
+/*	Непересекающиеся окружности
+	Jacobi(0, 0) = 2 * (xk(0) + 3);
+	Jacobi(0, 1) = 2 * (xk(1) - 2);
+	Jacobi(1, 0) = 2 * (xk(0) - 3);
+	Jacobi(1, 1) = 2 * (xk(1) - 2);
+	
+
+	В одной точке
+	Jacobi(0, 0) = 2 * (xk(0) + 2);
+	Jacobi(0, 1) = 2 * (xk(1) - 2);
+	Jacobi(1, 0) = 2 * (xk(0) - 2);
+	Jacobi(1, 1) = 2 * (xk(1) - 2);
+
+
+	В двух точках
+	Jacobi(0, 0) = 2 * (xk(0) + 1);
+	Jacobi(0, 1) = 2 * (xk(1) - 2);
+	Jacobi(1, 0) = 2 * (xk(0) - 1);
+	Jacobi(1, 1) = 2 * (xk(1) - 2);
+
+
+	Окружности и прямая
+	Jacobi(0, 0) = 2 * (xk(0) + 2);
+	Jacobi(0, 1) = 2 * (xk(1) - 2);
+	Jacobi(1, 0) = 2 * (xk(0) - 2);
+	Jacobi(1, 1) = 2 * (xk(1) - 2);
+	Jacobi(2, 0) = 1;
+	Jacobi(2, 1) = 1;
+
+
+	Три прямых
+	Jacobi(0, 0) = 1;
+	Jacobi(0, 1) = 0;
+	Jacobi(1, 0) = 0;
+	Jacobi(1, 1) = 1;
+	Jacobi(2, 0) = 1;
+	Jacobi(2, 1) = 1;
+
+
+	Три прямых, одна взевешена
+	Jacobi(0, 0) = 1;
+	Jacobi(0, 1) = 0;
+	Jacobi(1, 0) = 0;
+	Jacobi(1, 1) = 300;
+	Jacobi(2, 0) = 1;
+	Jacobi(2, 1) = 1;
+
+
+	Синусоида и прямая
+	Jacobi(0, 0) = cos(xk(0));
+	Jacobi(0, 1) = -1;
+	Jacobi(1, 0) = 1;
+	Jacobi(1, 1) = -1;
+*/

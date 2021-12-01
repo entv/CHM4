@@ -123,13 +123,13 @@ Matrix Matrix::Transpose()
 
 Matrix operator*(real constant, const Matrix& matrix)
 {
-	Matrix result(matrix.data.size());
+	Matrix result(matrix.data.size(), matrix.data[0].size());
 
 	for (int i = 0; i < result.data.size(); i++)
 	{
 		for (int j = 0; j < result.data[i].size(); j++)
 		{
-			result.data[i][j] *= constant;
+			result.data[i][j] = constant * matrix.data[i][j];
 		}
 	}
 
